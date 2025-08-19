@@ -63,7 +63,7 @@ export default function CvForm() {
       setError("Por favor, sube un PDF o carga el ejemplo antes de generar sugerencias.");
       return;
     }
-    setLoading(true);
+    setLoading(true); 
     setSuggestions([]);
     setError(null);
 
