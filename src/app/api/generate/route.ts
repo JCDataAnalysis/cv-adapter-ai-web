@@ -5,7 +5,6 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
 
 export async function POST(req: Request) {
   try {
-    // Este backend espera recibir un JSON simple, no un archivo.
     const { cv: cvText, jobOffer, language } = await req.json();
 
     if (!cvText || !jobOffer || !language) {
@@ -13,29 +12,34 @@ export async function POST(req: Request) {
     }
     
     const promptTemplate = `
-Actúa como un "Career Coach" experto y especialista en reclutamiento técnico, con más de 15 años de experiencia optimizando CVs para empresas de primer nivel. Tu única misión es ayudar a un candidato a adaptar su currículum a una oferta de trabajo específica.
+# TAREA
+Actúa como un "Career Coach" experto en reclutamiento técnico para empresas de primer nivel. Tu misión es analizar un CV y una oferta de trabajo para generar un informe que ayude al candidato a adaptar su CV y maximizar sus posibilidades de conseguir una entrevista.
 
-Tu análisis debe ser crítico, detallado y orientado a la acción. Debes identificar las discrepancias clave entre el CV y la oferta, y proponer cambios concretos y bien fundamentados.
+# PRINCIPIOS DE ANÁLISIS
+Tu análisis debe basarse estrictamente en los siguientes principios:
+1.  **Identificación de Palabras Clave:** Encuentra las habilidades, tecnologías y verbos de acción más importantes en la oferta de trabajo y asegúrate de que se reflejan de forma natural en el CV.
+2.  **Máxima Relevancia:** Enfoca tus recomendaciones en las áreas del CV que tienen mayor impacto y son más relevantes para la oferta.
+3.  **Consistencia y Tono:** Las sugerencias deben respetar el estilo y la longitud de las frases originales del CV. Si el original es conciso, tu sugerencia también debe serlo.
+4.  **Enfoque en el Rol:** Nunca menciones el nombre de la empresa de la oferta en las sugerencias. El objetivo es demostrar que el candidato es perfecto para los *requisitos del rol*.
+5.  **Autenticidad:** No inventes experiencia. Tu trabajo es reformular, cuantificar y destacar la experiencia que ya existe para que conecte mejor con la oferta.
 
-Analiza los textos y genera la lista de sugerencias en el siguiente idioma: **${language}**. El análisis debe ser profundo y las sugerencias deben ser escritas por un hablante nativo de ese idioma. Tu respuesta DEBE ser únicamente un objeto JSON, sin ningún texto introductorio o de cierre.
+# INSTRUCCIONES ADICIONALES
+- El texto del CV viene de un PDF y puede estar desordenado. Interprétalo y reconstruye su estructura mentalmente.
+- Genera entre 3 y 5 keywords clave y todas las sugerencias de reescritura que consideres necesarias.
 
-El JSON debe ser un array de objetos, donde cada objeto representa una "tarjeta de sugerencia" y sigue esta estructura exacta:
+# FORMATO DE SALIDA
+Tu respuesta debe ser únicamente un objeto JSON en idioma **${language}**. La estructura debe ser la siguiente:
 {
-  "area": "La sección o parte del CV a mejorar (ej. 'Resumen Profesional', 'Experiencia en Acme Inc.', 'Habilidades Técnicas').",
-  "original": "La frase o viñeta exacta del CV original que se puede mejorar.",
-  "sugerencia": "La nueva redacción propuesta. Debe integrar palabras clave y el tono de la oferta de trabajo de manera natural.",
-  "razon": "Una explicación concisa y clara de por qué este cambio es importante, conectándolo directamente con un requisito o palabra clave de la oferta."
+  "matchScore": Un número entero entre 0 y 100 (ejemplo: 85, no 0.85),
+  "summary": "string",
+  "keywords": [ { "keyword": "string", "presentInCv": boolean, "context": "string" } ],
+  "rewriteSuggestions": [ { "area": "string", "original": "string", "sugerencia": "string", "razon": "string" } ]
 }
 
-Genera entre 3 y 5 sugerencias de alta calidad. Céntrate en las mejoras más impactantes. No inventes experiencia, solo reformula y destaca la existente.
-
-A continuación, te proporciono el CV del candidato y la descripción de la oferta de trabajo.
-
-**Importante: El texto del CV ha sido extraído automáticamente de un archivo PDF y puede estar desordenado o con las secciones mezcladas. Tu primera tarea es interpretar este texto y reconstruir mentalmente la estructura del CV lo mejor que puedas antes de realizar el análisis comparativo.**
-
+# DATOS DE ENTRADA
 [CV DEL CANDIDATO]
 ---
-${cvText} 
+${cvText}
 ---
 [FIN CV]
 
@@ -51,21 +55,28 @@ ${jobOffer}
     const response = await result.response;
     const text = response.text();
 
+    // Lógica robusta para extraer el JSON
     const match = text.match(/```json\s*([\s\S]*?)\s*```/);
+    let jsonString = text;
 
-    if (!match || !match[1]) {
-      try {
-        const suggestions = JSON.parse(text);
-        return NextResponse.json({ suggestions });
-      } catch (jsonError) {
-        throw new Error("La respuesta de la IA no contenía un bloque de código JSON válido.");
+    if (match && match[1]) {
+      jsonString = match[1];
+    } else {
+      // Intenta encontrar el primer '{' y el último '}'
+      const firstBracket = text.indexOf('{');
+      const lastBracket = text.lastIndexOf('}');
+      if (firstBracket !== -1 && lastBracket !== -1) {
+        jsonString = text.substring(firstBracket, lastBracket + 1);
       }
     }
 
-    const jsonString = match[1];
-    const suggestions = JSON.parse(jsonString);
-
-    return NextResponse.json({ suggestions });
+    try {
+      const analysis = JSON.parse(jsonString);
+      return NextResponse.json({ analysis });
+    } catch (e) {
+      console.error("Error al parsear el JSON final:", e);
+      throw new Error("La respuesta de la IA no pudo ser procesada como un JSON válido.");
+    }
 
   } catch (error) {
     console.error("Error en el endpoint /api/generate:", error);
