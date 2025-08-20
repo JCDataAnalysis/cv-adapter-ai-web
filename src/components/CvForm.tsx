@@ -11,11 +11,13 @@ type Suggestion = {
   original: string;
   sugerencia: string;
   razon: string;
+  justificationQuote: string; // CORRECCIÓN: Hacemos la cita obligatoria para que coincida con AnalysisView
 };
 
+// CORRECCIÓN: Sincronizamos el tipo Keyword con el que usa AnalysisView
 type Keyword = {
   keyword: string;
-  presentInCv: boolean;
+  status: 'full' | 'partial' | 'missing'; 
   context: string;
 };
 
@@ -34,6 +36,7 @@ export default function CvForm() {
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<Analysis | null>(null);
+  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -43,12 +46,15 @@ export default function CvForm() {
     setFileName(file.name);
     setCvText('');
     setError(null);
+    setPdfData(null);
     
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
         const arrayBuffer = e.target?.result as ArrayBuffer;
         if (!arrayBuffer) throw new Error("No se pudo leer el archivo");
+        
+        setPdfData(arrayBuffer);
 
         const loadingTask = pdfjs.getDocument(arrayBuffer);
         const pdf = await loadingTask.promise;
@@ -80,14 +86,12 @@ export default function CvForm() {
     setLoading(true);
     setAnalysisResult(null);
     setError(null);
-
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cv: cvText, jobOffer, language }),
       });
-
       if (!response.ok) {
         throw new Error(`Error del servidor: ${response.status}. Inténtalo de nuevo más tarde.`);
       }
@@ -104,31 +108,51 @@ export default function CvForm() {
   const handleDemo = () => {
     setFileName('CV de Ejemplo (Cargado)');
     setError(null);
+    setPdfData(null); 
     setCvText(`
-      Juan Pérez
-      Product Manager con 5 años de experiencia en startups de tecnología.
-      
+          Ana García
+      Profesional orientada a producto con experiencia en la optimización de procesos y el desarrollo de productos digitales en el sector e-commerce. Buscando hacer la transición al mundo SaaS B2B.
+
       EXPERIENCIA LABORAL
-      Tech Solutions Inc. - Product Manager (2020 - Presente)
-      - Lideré el lanzamiento del producto X, alcanzando 100,000 usuarios en 6 meses.
-      - Gestioné el backlog y definí las prioridades usando Jira.
-      
+
+      ShopifyPlus Store - Product Owner (Enero 2023 - Presente)
+      - Responsable de la hoja de ruta para la nueva sección de personalización de productos.
+      - Colaboré con el equipo de desarrollo para definir historias de usuario y criterios de aceptación.
+      - Aumenté la conversión de la página de producto en un 10% a través de tests A/B.
+
+      Retail Online Co. - Business Analyst (Junio 2020 - Diciembre 2022)
+      - Analicé los datos de ventas para identificar tendencias y oportunidades de mejora.
+      - Creé dashboards en Tableau para el seguimiento de KPIs.
+      - Documenté los requisitos para nuevas funcionalidades de la plataforma.
+
       HABILIDADES
-      - Metodologías Ágiles (Scrum)
-      - Análisis de Datos (SQL, Mixpanel)
-      - Diseño de UX (Figma)
+      - Gestión de Proyectos (Jira, Notion)
+      - Metodologías Ágiles
+      - Análisis de Datos (Tableau, SQL básico)
+      - E-commerce y plataformas B2C
     `);
     setJobOffer(`
-      Buscamos Product Manager para unirse a nuestro equipo en una empresa SaaS.
-      
-      RESPONSABILIDADES
-      - Definir la visión y estrategia del producto.
-      - Trabajar con equipos de ingeniería para entregar nuevas funcionalidades.
-      - Analizar métricas de producto para tomar decisiones basadas en datos.
-      
-      REQUISITOS
-      - 3+ años de experiencia como Product Manager en SaaS.
-      - Experiencia demostrable con metodologías Ágiles.
+       🚀 Product Manager Senior (SaaS B2B) - Innovatech Dynamics
+
+      Sobre nosotros:
+      En Innovatech Dynamics, estamos construyendo el futuro del software de análisis de datos para empresas. Somos un equipo apasionado, ágil y en pleno crecimiento, y buscamos un Product Manager que nos ayude a llevar nuestros productos al siguiente nivel.
+
+      🎯 Tu Misión:
+      Serás el dueño de nuestro producto estrella, desde la concepción de la idea hasta el lanzamiento y la iteración. Traducirás las necesidades de nuestros clientes en una hoja de ruta clara y trabajarás mano a mano con nuestros equipos de ingeniería y diseño para crear soluciones que enamoren.
+
+      📋 Responsabilidades Clave:
+      - Definir y comunicar la visión, estrategia y hoja de ruta del producto.
+      - Realizar investigaciones de mercado y análisis de la competencia para identificar oportunidades.
+      - Trabajar en un entorno ágil (Scrum), gestionando el backlog, escribiendo historias de usuario y priorizando funcionalidades.
+      - Analizar métricas de producto (uso, retención, conversión) para tomar decisiones basadas en datos con herramientas como Mixpanel y SQL.
+      - Colaborar estrechamente con ingeniería, UX/UI, marketing y ventas para asegurar un lanzamiento exitoso.
+
+      ✅ Lo que buscamos (Requisitos):
+      - 3+ años de experiencia como Product Manager, idealmente en un entorno de producto SaaS B2B.
+      - Experiencia demostrable liderando productos a lo largo de todo su ciclo de vida.
+      - Fuerte conocimiento de metodologías Ágiles (Scrum, Kanban).
+      - Capacidad analítica sólida y experiencia tomando decisiones basadas en datos.
+      - Excelentes habilidades de comunicación y capacidad para trabajar con equipos multifuncionales.
     `);
   };
 
@@ -138,6 +162,7 @@ export default function CvForm() {
     setCvText('');
     setJobOffer('');
     setError(null);
+    setPdfData(null);
   };
 
   return (
