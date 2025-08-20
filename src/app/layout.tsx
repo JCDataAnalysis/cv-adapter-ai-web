@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CV Optimizer AI",
-  description: "Adapta tu CV a cualquier oferta de trabajo con IA",
+  title: "CVAdapter - Optimiza tu CV con IA",
+  description: "Adapta tu CV a cualquier oferta de trabajo con inteligencia artificial",
 };
 
 export default function RootLayout({
