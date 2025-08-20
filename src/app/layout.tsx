@@ -7,6 +7,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "CVAdapter - Optimiza tu CV con IA",
   description: "Adapta tu CV a cualquier oferta de trabajo con inteligencia artificial",
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-icon.svg'
+  }
 };
 
 export default function RootLayout({
