@@ -11,29 +11,48 @@ export async function POST(req: Request) {
       return new NextResponse("Faltan datos en la petición", { status: 400 });
     }
     
+    // --- PROMPT SIMPLIFICADO Y MÁS ROBUSTO ---
     const promptTemplate = `
 # TAREA
-Actúa como un "Career Coach" experto en reclutamiento técnico para empresas de primer nivel. Tu misión es analizar un CV y una oferta de trabajo para generar un informe que ayude al candidato a adaptar su CV y maximizar sus posibilidades de conseguir una entrevista.
+Actúa como un "Career Coach" de élite, experto en reclutamiento técnico. Tu misión es analizar un CV y una oferta de trabajo y generar un informe de análisis completo y accionable.
+
+**Instrucción de Tono Principal: Dirígete SIEMPRE al usuario en segunda persona ("tú", "tu CV", "te recomiendo"). Sé constructivo y profesional. Nunca, bajo ninguna circunstancia, menciones el nombre del candidato ni uses frases como "el candidato".**
 
 # PRINCIPIOS DE ANÁLISIS
 Tu análisis debe basarse estrictamente en los siguientes principios:
-1.  **Identificación de Palabras Clave:** Encuentra las habilidades, tecnologías y verbos de acción más importantes en la oferta de trabajo y asegúrate de que se reflejan de forma natural en el CV.
-2.  **Máxima Relevancia:** Enfoca tus recomendaciones en las áreas del CV que tienen mayor impacto y son más relevantes para la oferta.
-3.  **Consistencia y Tono:** Las sugerencias deben respetar el estilo y la longitud de las frases originales del CV. Si el original es conciso, tu sugerencia también debe serlo.
-4.  **Enfoque en el Rol:** Nunca menciones el nombre de la empresa de la oferta en las sugerencias. El objetivo es demostrar que el candidato es perfecto para los *requisitos del rol*.
-5.  **Autenticidad:** No inventes experiencia. Tu trabajo es reformular, cuantificar y destacar la experiencia que ya existe para que conecte mejor con la oferta.
+1.  **Requisitos Excluyentes (Must-Haves):** Evalúa de forma crítica si cumples los requisitos no negociables (ej. 'Grado en Ingeniería').
+2.  **Impacto Cuantificable:** Busca oportunidades en tu experiencia para añadir métricas y resultados cuantificables.
+3.  **"Soft Skills" y Cultura:** Identifica las habilidades blandas y rasgos culturales de la oferta y refléjalos.
+4.  **Keywords Técnicas:** Identifica las palabras clave técnicas cruciales.
+5.  **Consistencia y Tono:** Respeta el estilo y longitud de las frases originales de tu CV.
+6.  **Autenticidad:** No inventes experiencia, solo reformula y destaca la que ya tienes.
 
-# INSTRUCCIONES ADICIONALES
-- El texto del CV viene de un PDF y puede estar desordenado. Interprétalo y reconstruye su estructura mentalmente.
-- Genera entre 3 y 5 keywords clave y todas las sugerencias de reescritura que consideres necesarias.
+# PROCESO DE RAZONAMIENTO PARA KEYWORDS
+Para cada keyword que identifiques en la oferta, sigue estos pasos internos:
+1.  Lee la keyword.
+2.  Busca en el CV si la mencionas o demuestras experiencia en ella.
+3.  Concluye si la presencia es 'full' (bien demostrada), 'partial' (mencionada pero mejorable), o 'missing' (ausente).
+4.  Usa esta conclusión para rellenar el campo "status" en el JSON. Tu etiquetado DEBE coincidir con tu análisis.
 
 # FORMATO DE SALIDA
 Tu respuesta debe ser únicamente un objeto JSON en idioma **${language}**. La estructura debe ser la siguiente:
 {
-  "matchScore": Un número entero entre 0 y 100 (ejemplo: 85, no 0.85),
-  "summary": "string",
-  "keywords": [ { "keyword": "string", "presentInCv": boolean, "context": "string" } ],
-  "rewriteSuggestions": [ { "area": "string", "original": "string", "sugerencia": "string", "razon": "string" } ]
+  "matchScore": Un número entero entre 0 y 100 (ejemplo: 85),
+  "summary": "Un resumen en segunda persona (ej: 'Tu CV es sólido, pero puedes mejorar...').",
+  "keywords": [ 
+    { 
+      "keyword": "La habilidad o requisito clave.", 
+      "status": "Asigna uno de estos tres valores: 'full', 'partial', o 'missing'.", 
+      "context": "Una justificación muy breve (máximo 1-2 líneas) de por qué esta keyword es crucial."
+    } 
+  ],
+  "rewriteSuggestions": [ { 
+      "area": "string", 
+      "original": "string", 
+      "sugerencia": "string", 
+      "razon": "string",
+      "justificationQuote": "La frase exacta de la oferta que justifica esta sugerencia. Este campo es obligatorio." 
+  } ]
 }
 
 # DATOS DE ENTRADA
@@ -55,14 +74,12 @@ ${jobOffer}
     const response = await result.response;
     const text = response.text();
 
-    // Lógica robusta para extraer el JSON
     const match = text.match(/```json\s*([\s\S]*?)\s*```/);
     let jsonString = text;
 
     if (match && match[1]) {
       jsonString = match[1];
     } else {
-      // Intenta encontrar el primer '{' y el último '}'
       const firstBracket = text.indexOf('{');
       const lastBracket = text.lastIndexOf('}');
       if (firstBracket !== -1 && lastBracket !== -1) {
@@ -72,6 +89,7 @@ ${jobOffer}
 
     try {
       const analysis = JSON.parse(jsonString);
+      // CORRECCIÓN: La respuesta debe devolver un objeto con la clave 'analysis'
       return NextResponse.json({ analysis });
     } catch (e) {
       console.error("Error al parsear el JSON final:", e);
