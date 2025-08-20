@@ -31,7 +31,7 @@ type Analysis = {
 export default function CvForm() {
   const [cvText, setCvText] = useState('');
   const [jobOffer, setJobOffer] = useState('');
-  const [language, setLanguage] = useState('Español');
+  const [language, setLanguage] = useState('');
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +79,10 @@ export default function CvForm() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!language) {
+      setError("Por favor, selecciona un idioma antes de generar sugerencias.");
+      return;
+    }
     if (!cvText) {
       setError("Por favor, sube un PDF o carga el ejemplo antes de generar sugerencias.");
       return;
@@ -107,6 +111,7 @@ export default function CvForm() {
 
   const handleDemo = () => {
     setFileName('CV de Ejemplo (Cargado)');
+    setLanguage('Español');
     setError(null);
     setPdfData(null); 
     setCvText(`
@@ -161,37 +166,55 @@ export default function CvForm() {
     setFileName('');
     setCvText('');
     setJobOffer('');
+    setLanguage('');
     setError(null);
     setPdfData(null);
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {!analysisResult && (
         <>
           <div className="text-center mb-10">
             <button 
               type="button" 
               onClick={handleDemo} 
-              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50 transition-colors text-sm font-semibold shadow-sm"
+              className="group relative inline-flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-base border-0 overflow-hidden"
             >
-              ¿No tienes un CV a mano? <strong>Ver un Ejemplo</strong>
+              {/* Background glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              
+              {/* Text */}
+              <span className="relative z-10">
+                ¿No tienes un CV a mano? <strong className="text-white font-bold">Ver un Ejemplo</strong>
+              </span>
             </button>
           </div>
           <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-10">
               <div className="space-y-10">
                 <div>
-                  <h2 className="text-xl font-semibold text-slate-800 mb-3">1. Elige el Idioma</h2>
-                  <div className="relative w-full md:w-2/3">
+                  <h2 className="text-xl font-semibold text-slate-800 mb-3 flex items-center gap-3">
+                    1. Elige el Idioma
+                    {language && (
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center checkmark-animate">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </h2>
+                  <div className="relative w-full lg:w-3/4">
                     <select 
                       id="language-select" 
                       value={language} 
                       onChange={(e) => setLanguage(e.target.value)}
+                      required
                       className="appearance-none w-full block pl-4 pr-10 py-3 text-base border border-slate-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     >
-                      <option>Español</option>
-                      <option>Inglés</option>
+                      <option value="">Selecciona un idioma</option>
+                      <option value="Español">Español</option>
+                      <option value="Inglés">Inglés</option>
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-700">
                       <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -201,28 +224,54 @@ export default function CvForm() {
                   </div>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-slate-800 mb-3">2. Sube tu CV en PDF</h2>
+                  <h2 className="text-xl font-semibold text-slate-800 mb-3 flex items-center gap-3">
+                    2. Sube tu CV en PDF
+                    {(fileName || cvText) && (
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center checkmark-animate">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </h2>
                   <input type="file" accept=".pdf" onChange={handleFileChange}
                          className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors"/>
                   {fileName && <span className="text-sm text-slate-500 mt-2">Archivo: {fileName} {loading && !analysisResult ? '(Procesando...)' : '(Listo)'}</span>}
+                  {cvText && !fileName && <span className="text-sm text-green-600 mt-2">✓ CV de ejemplo cargado</span>}
                 </div>
               </div>
               <div className="flex flex-col">
-                <h2 className="text-xl font-semibold text-slate-800 mb-3">3. Pega la Oferta de Trabajo</h2>
+                <h2 className="text-xl font-semibold text-slate-800 mb-3 flex items-center gap-3">
+                  3. Pega la Oferta de Trabajo
+                  {jobOffer && (
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center checkmark-animate">
+                      <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </h2>
                 <textarea id="job-offer-input" value={jobOffer} onChange={(e) => setJobOffer(e.target.value)}
                           placeholder="Pega aquí la descripción completa..." required
-                          className="w-full flex-grow h-64 p-4 border border-slate-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"/>
+                          className="w-full flex-grow h-80 p-4 border border-slate-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"/>
               </div>
             </div>
-            <div className="flex justify-center pt-4">
+            <div className="flex justify-center pt-6">
               <button type="submit" disabled={loading}
-                className="flex items-center justify-center w-64 h-16 px-8 py-4 border border-transparent text-lg font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 transition-all transform hover:scale-105 whitespace-nowrap"
+                className="flex items-center justify-center w-80 h-16 px-8 py-4 border border-transparent text-lg font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 transition-all transform hover:scale-105 whitespace-nowrap"
               >
                 {loading ? (
-                  <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="relative">
+                      {/* Outer ring */}
+                      <div className="w-8 h-8 border-4 border-indigo-200 rounded-full animate-pulse-ring"></div>
+                      {/* Spinning ring */}
+                      <div className="absolute top-0 left-0 w-8 h-8 border-4 border-transparent border-t-indigo-600 rounded-full animate-spin"></div>
+                      {/* Inner dot */}
+                      <div className="absolute top-1/2 left-1/2 w-2 h-2 bg-indigo-600 rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+                    </div>
+                    <span className="text-indigo-600 font-medium">Generando análisis...</span>
+                  </div>
                 ) : '4. Generar Análisis'}
               </button>
             </div>
